@@ -1,69 +1,137 @@
-import Image from "next/image";
+"use client";
 
-export default function Home() {
+import { useEffect, useState, ChangeEvent } from "react";
+import Hero from "@/app/components/Hero";
+import WorkoutCard from "@/app/components/WorkoutCard";
+import { Workout } from "@/app/context/PlanContext";
+
+type SortOption = "duration" | "calories" | "rating";
+
+export default function HomePage() {
+  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [sortBy, setSortBy] = useState<SortOption>("duration");
+  const [search, setSearch] = useState<string>("");
+
+  useEffect(() => {
+    async function fetchWorkouts() {
+      try {
+        const res = await fetch("https://api.abcz.workers.dev/api/fitlog");
+        const data = await res.json();
+        setWorkouts(Array.isArray(data) ? data : data.data || []);
+      } catch (err) {
+        console.error("Failed to fetch workouts", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    fetchWorkouts();
+  }, []);
+
+  const handleSortChange = (e: ChangeEvent<HTMLSelectElement>) => {
+    setSortBy(e.target.value as SortOption);
+  };
+
+  const filteredWorkouts = workouts
+    .filter((w) => {
+      const name = w.name || w.title || "";
+      const matchesSearch = name.toLowerCase().includes(search.toLowerCase());
+      return matchesSearch;
+    })
+    .sort((a, b) => {
+      if (sortBy === "duration") {
+        return (b.duration || 0) - (a.duration || 0);
+      }
+      if (sortBy === "calories") {
+        const calA = a.calories ?? a.caloriesBurned ?? 0;
+        const calB = b.calories ?? b.caloriesBurned ?? 0;
+        return calB - calA;
+      }
+      if (sortBy === "rating") {
+        return (b.rating || 0) - (a.rating || 0);
+      }
+      return 0;
+    });
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert h-5 w-[100px]"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the{" "}
-            <code className="rounded bg-black/[.06] px-1.5 py-0.5 font-mono text-[0.9em] dark:bg-white/[.08]">
-              page.tsx
-            </code>{" "}
-            file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert h-[14px] w-4"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={14}
+    <div>
+      <Hero />
+
+      <section id="library" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+          <div>
+            <h2 className="text-3xl font-extrabold text-white uppercase tracking-tight">
+              THE LIBRARY
+            </h2>
+            <p className="text-zinc-400 mt-1">
+              Twelve lifts covering every major muscle group.
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-4">
+            {/* Search Input */}
+            <input
+              type="text"
+              placeholder="Search workouts..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="bg-[#18181b] border border-zinc-800 text-white px-4 py-2 rounded-xl focus:outline-none focus:border-[#ccff00]"
             />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+
+            {/* Sort Control */}
+            <div className="flex items-center gap-2">
+              <label htmlFor="sort-select" className="text-sm font-medium text-zinc-400 whitespace-nowrap">
+                Sort By:
+              </label>
+              <select
+                id="sort-select"
+                value={sortBy}
+                onChange={handleSortChange}
+                className="bg-[#18181b] border border-zinc-800 text-white px-4 py-2 rounded-xl focus:outline-none focus:border-[#ccff00] cursor-pointer"
+              >
+                <option value="duration">Duration</option>
+                <option value="calories">Calories</option>
+                <option value="rating">Rating</option>
+              </select>
+            </div>
+          </div>
         </div>
-      </main>
+
+        {/* Loading Animation & Skeleton Cards */}
+        {loading ? (
+          <div>
+            <div className="flex items-center justify-center gap-3 mb-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-2 border-zinc-700 border-t-[#ccff00]"></div>
+              <span className="text-sm text-zinc-400 font-semibold tracking-wider uppercase">
+                Fetching Workouts...
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <div
+                  key={i}
+                  className="bg-[#12141a] border border-zinc-800/80 rounded-2xl p-4 animate-pulse"
+                >
+                  <div className="w-full h-48 bg-zinc-800/70 rounded-xl mb-4" />
+                  <div className="h-5 bg-zinc-800/70 rounded w-3/4 mb-2" />
+                  <div className="h-4 bg-zinc-800/50 rounded w-1/2 mb-4" />
+                  <div className="flex justify-between items-center pt-2">
+                    <div className="h-4 bg-zinc-800/50 rounded w-1/3" />
+                    <div className="h-8 bg-zinc-800/70 rounded-full w-24" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredWorkouts.map((workout) => (
+              <WorkoutCard key={workout.id} workout={workout} />
+            ))}
+          </div>
+        )}
+      </section>
     </div>
   );
 }
